@@ -10,6 +10,10 @@ describe "AuthenticationPages" do
 
 		it { should have_selector('h1', text: 'Sign in')}
 		it { should have_selector('title', text: 'Sign in')}
+		it { should_not have_link('Users',    href: users_path) }
+		it { should_not have_link('Profile') }
+		it { should_not have_link('Sign out', href: signout_path) }
+		it { should_not have_link('Settings') }
 
 
 		describe "with invalid information" do
@@ -43,6 +47,22 @@ describe "AuthenticationPages" do
 
 		describe "authorization" do
 
+			describe "for signed-in users" do
+				let(:user) { FactoryGirl.create(:user) }
+				before { sign_in user }
+
+				describe "visiting the new action" do
+					before { visit new_user_path }
+					it { should_not have_selector('title', text: 'Sign up') }
+				end
+
+				describe "visiting the create action" do
+					before { post users_path }
+					specify { response.should redirect_to(root_path) }
+				end	       
+
+			end
+
 			describe "as a non-admin user" do
 				let(:user) { FactoryGirl.create(:user) }
 				let(:non_admin) { FactoryGirl.create(:user) }
@@ -72,7 +92,16 @@ describe "AuthenticationPages" do
 	          end
 	        end
 
-
+	        describe "after subsequent signin attemps" do
+	        	before do
+	        		delete signout_path
+	        		sign_in user
+	        	end
+	        	
+	        	it "should render the profile page" do
+	        		page.should have_selector('title', text: user.name)
+	        	end
+	        end
 	      end
 
 	      describe "in the Users controller" do

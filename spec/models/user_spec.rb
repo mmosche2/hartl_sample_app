@@ -27,9 +27,18 @@ describe User do
 	it { should respond_to(:password_confirmation) }
 	it { should respond_to(:remember_token) }
 	it { should respond_to(:authenticate) }
+	it { should respond_to(:microposts) }
 
 	it { should be_valid }
 	it { should_not be_admin }
+
+	describe "accessible attributes" do
+    it "should not allow access to admin" do
+      expect do
+        User.new(admin: true)
+      end.to raise_error(ActiveModel::MassAssignmentSecurity::Error)
+    end    
+  end
 
 	describe "with admin attribute set to 'true'" do
 		before do
@@ -133,6 +142,26 @@ describe User do
 	describe "remember token" do
 		before { @user.save }
 		its(:remember_token) { should_not be_blank }
+	end
+
+	describe "micropost associations" do
+		before { @user.save }
+		let!(:older_micropost) { FactoryGirl.create(:micropost, user: @user, created_at: 1.day.ago) }
+		let!(:newer_micropost) { FactoryGirl.create(:micropost, user: @user, created_at: 1.hour.ago) }
+
+		it "should return the microposts with the newest first" do
+			@user.microposts.should == [newer_micropost, older_micropost]
+		end
+
+		it "should destroy associated microposts when a user is destroyed" do
+			microposts = @user.microposts.dup
+			@user.destroy
+			microposts.should_not be_empty
+			microposts.each do |micropost|
+				Micropost.find_by_id(micropost.id).should be_nil
+			end
+		end
+
 	end
 
 

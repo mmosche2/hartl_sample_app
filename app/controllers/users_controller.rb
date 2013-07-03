@@ -2,6 +2,7 @@ class UsersController < ApplicationController
   before_filter :signed_in_user, only: [:edit, :update, :index, :destroy]
   before_filter :correct_user,   only: [:edit, :update]
   before_filter :admin_user,     only: [:destroy]
+  before_filter :signed_out_user, only: [:new, :create]
   
   def index
     @title = 'All users'
@@ -25,8 +26,9 @@ class UsersController < ApplicationController
   end
 
   def show
-  	@user = User.find(params[:id])
-  	@title = @user.name
+    @user = User.find(params[:id])
+    @title = @user.name
+  	@microposts = @user.microposts.paginate(page: params[:page])
   end
 
   def edit
@@ -44,9 +46,15 @@ class UsersController < ApplicationController
   end
 
   def destroy
-    User.find(params[:id]).destroy
-    flash[:success] = "User destroyed."
-    redirect_to users_url
+    user = User.find(params[:id])
+    if !current_user?(user)
+      user.destroy
+      flash[:success] = "User destroyed."
+      redirect_to users_url
+    else
+      flash[:error] = "You can't delete yourself!"
+      redirect_to root_url
+    end 
   end
 
   private
@@ -65,6 +73,10 @@ class UsersController < ApplicationController
 
     def admin_user
       redirect_to(root_path) unless current_user.admin?
+    end
+
+    def signed_out_user
+      redirect_to(root_path) unless !signed_in?
     end
 
 end
